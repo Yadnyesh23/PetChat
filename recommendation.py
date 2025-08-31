@@ -1,9 +1,13 @@
 import streamlit as st
 import os
+from dotenv import load_dotenv
 from langchain_google_genai import ChatGoogleGenerativeAI
 from langchain.prompts import PromptTemplate
 from langchain.chains import LLMChain
 from langchain.memory import ConversationBufferMemory
+
+# --- Load Environment Variables ---
+load_dotenv()
 
 # --- Streamlit UI Configuration ---
 st.set_page_config(page_title="Personalized Pet Care Chat", page_icon="🐾")
@@ -12,12 +16,13 @@ st.title("🐾 Personalized Pet Care Chat")
 st.markdown("I'm here to help! Please tell me about your pet, then I'll give tailored recommendations!")
 
 # --- API Key & Model Initialization ---
-if "GOOGLE_API_KEY" not in os.environ:
-    st.error("Please set the GOOGLE_API_KEY environment variable.")
-    st.stop()
-
 try:
-    llm = ChatGoogleGenerativeAI(model="gemini-1.5-flash-latest", temperature=0.7)
+    api_key = os.getenv("GOOGLE_API_KEY")
+    if not api_key:
+        st.error("The GOOGLE_API_KEY environment variable is not set. Please check your .env file.")
+        st.stop()
+    
+    llm = ChatGoogleGenerativeAI(model="gemini-1.5-flash-latest", temperature=0.7, google_api_key=api_key)
 except Exception as e:
     st.error(f"Failed to initialize the LLM: {e}")
     st.stop()
@@ -40,7 +45,7 @@ Give a comprehensive bulleted list of recommendations.
 
 memory = ConversationBufferMemory(
     memory_key="chat_history",
-    input_key="human_input",  # ✅ specify which is the user input
+    input_key="human_input",
     human_prefix="Human",
     ai_prefix="AI"
 )
@@ -149,8 +154,9 @@ else:
                 "pet_info": st.session_state.pet_info,
                 "human_input": user_input
             })
-            response = result["text"]  # ✅ extract text
+            response = result["text"]
 
         st.session_state.messages.append({"role": "assistant", "content": response})
         with st.chat_message("assistant"):
             st.write(response)
+
